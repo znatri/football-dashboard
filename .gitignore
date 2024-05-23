@@ -316,6 +316,8 @@ pyrightconfig.json
 
 # Ignore all model files
 *.pt
+stubs/
+models/
 
 # Ignore input images and videos
 input_images/
