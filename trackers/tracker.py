@@ -4,7 +4,7 @@ from typing import List, Dict, Union
 import sys
 sys.path.append("../ ")
 
-from utils import get_center_of_bbox, get_bbox_width
+from utils import get_center_of_bbox, get_bbox_width, get_foot_position
 
 import cv2
 import numpy as np
@@ -38,7 +38,34 @@ class ObjectTracker:
             return sv.ByteTrack()
         else:
             raise ValueError(f"Unsupported tracker type: {tracker_type}")
+        
+    def add_position_to_tracks(self, tracks):
+        """
+        Adds positional information to each track in the tracking dictionary. For the ball, the position is defined
+        as the center of its bounding box. For players or other objects, the position is defined as the foot position
+        derived from the bounding box.
 
+        :param tracks: A dictionary where each key represents an object type (e.g., 'ball', 'players') and the value
+                    is a list of dictionaries for each frame that map a track ID to track information including
+                    the bounding box.
+        """
+        for object, object_tracks in tracks.items():
+            for frame_num, track in enumerate(object_tracks):
+                for track_id, track_info in track.items():
+                    try:
+                        bbox = track_info['bbox']
+
+                        # Determine position based on the type of object
+                        if object == 'ball':
+                            position= get_center_of_bbox(bbox)
+                        else:
+                            position = get_foot_position(bbox)
+                            
+                        tracks[object][frame_num][track_id]['position'] = position
+                    except (KeyError, TypeError, IndexError) as error:
+                        print(f"Error adjusting position for track ID {track_id} in frame {frame_num}: {error}")
+                        continue
+                    
     def interpolate_ball_positions(self,ball_positions):
         ball_positions = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
         df_ball_positions = pd.DataFrame(ball_positions,columns=['x1','y1','x2','y2'])

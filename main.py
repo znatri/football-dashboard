@@ -4,6 +4,7 @@ from utils import read_video, save_video
 from trackers import ObjectTracker
 from team_assigner import TeamAssigner
 from player_ball_assigner import PlayerBallAssigner
+from camera_movement_estimator import CamerMovementEstimator
 
 def main():
     # Read Video
@@ -11,8 +12,16 @@ def main():
 
     # Get Tracks
     tracker = ObjectTracker('models/best.pt')
-    tracks = tracker.track_objects(video_frames, read_from_stub=True, stub_path='stubs/track_stubs.pkl')
+    tracks = tracker.track_objects(video_frames, read_from_stub=True, stub_path='stubs/object_tracker_stubs.pkl')
 
+    # Get object positions
+    tracker.add_position_to_tracks(tracks)
+
+    # Camera Movement Estimator
+    camera_movement_estimator = CamerMovementEstimator(frame=video_frames[0])
+    camera_movement_per_frame = camera_movement_estimator.get_camera_movement(video_frames, read_from_stub=True, stub_path='stubs/camera_movement_stubs.pkl')
+    camera_movement_estimator.adjust_position_to_tracks(tracks, camera_movement_per_frame)
+    
     # Interpolate ball positions
     tracks["ball"] = tracker.interpolate_ball_positions(tracks["ball"])
 
@@ -44,6 +53,9 @@ def main():
 
     # Draw Output
     output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control)
+
+    # Draw camera movement
+    output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
 
     # Save Video
     save_video(output_video_frames, 'output_videos/08fd33_4.avi')
