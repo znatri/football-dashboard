@@ -74,6 +74,13 @@ class CamerMovementEstimator:
 
             old_gray = frame_gray.copy()
 
+        if stub_path:
+            try:
+                with open(stub_path, 'wb') as f:
+                    pickle.dump(camera_movement, f)
+            except IOError as e:
+                raise RuntimeError(f"Error saving tracks to file: {e}")
+
         return camera_movement
 
     def draw_camera_movement(self, frames: List[np.ndarray], camera_movement_per_frame: List) -> List[np.ndarray]:
