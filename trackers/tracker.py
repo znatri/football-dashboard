@@ -202,12 +202,52 @@ class ObjectTracker:
 
         return frame
     
-    def draw_annotations(self, frames: List, tracks: Dict):
+    def draw_ball_control_stats(self, frame, frame_num, team_ball_control):
+        """
+        Draw ball control statistics on a video frame.
+
+        :param frame: The current video frame to draw on.
+        :param frame_num: The index of the current frame in the sequence.
+        :param team_ball_control: An array indicating which team controlled the ball at each frame.
+        :return: The frame with ball control statistics drawn on it.
+        """
+        # Define the area for displaying stats
+        start_point = (1350, 850)
+        end_point = (1900, 970)
+        color_white = (255, 255, 255)
+        transparency = 0.4
+        
+        # Create a semi-transparent overlay
+        overlay = frame.copy()
+        cv2.rectangle(overlay, start_point, end_point, color_white, cv2.FILLED)
+        cv2.addWeighted(overlay, transparency, frame, 1 - transparency, 0, frame)
+
+        # Calculate ball control percentages up to the current frame
+        control_data_until_now = team_ball_control[:frame_num + 1]
+        frames_with_team_1_control = np.sum(control_data_until_now == 1)
+        frames_with_team_2_control = np.sum(control_data_until_now == 2)
+        total_controlled_frames = frames_with_team_1_control + frames_with_team_2_control
+
+        if total_controlled_frames > 0:
+            team_1_percentage = frames_with_team_1_control / total_controlled_frames * 100
+            team_2_percentage = frames_with_team_2_control / total_controlled_frames * 100
+        else:
+            team_1_percentage = team_2_percentage = 0
+
+        # Draw the text on the frame
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(frame, f"Team 1 Ball Control: {team_1_percentage:.2f}%", (1400, 900), font, 1, (0, 0, 0), 3)
+        cv2.putText(frame, f"Team 2 Ball Control: {team_2_percentage:.2f}%", (1400, 950), font, 1, (0, 0, 0), 3)
+
+        return frame
+    
+    def draw_annotations(self, frames: List, tracks: Dict, team_ball_control: List):
         """
         Draw annotations on a batch of frames
 
         :param frames: list of frames
         :param tracks: dictionary containing the object tracks
+        :param team_ball_control: An array indicating which team controlled the ball at each frame.
         :return: list of annotated frames
         """
         annotated_frames = []
@@ -234,6 +274,9 @@ class ObjectTracker:
             # Draw Ball BBox
             for _, ball in ball_dict.items():
                 frame = self.draw_triangle(frame, ball["bbox"],(0,255,0))
+
+            # Draw Team Ball Control
+            frame = self.draw_ball_control_stats(frame, frame_num, team_ball_control)
 
             annotated_frames.append(frame)
 

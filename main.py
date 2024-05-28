@@ -11,7 +11,7 @@ def main():
 
     # Get Tracks
     tracker = ObjectTracker('models/best.pt')
-    tracks = tracker.track_objects(video_frames, read_from_stub=False, stub_path='stubs/track_stubs.pkl')
+    tracks = tracker.track_objects(video_frames, read_from_stub=True, stub_path='stubs/track_stubs.pkl')
 
     # Interpolate ball positions
     tracks["ball"] = tracker.interpolate_ball_positions(tracks["ball"])
@@ -34,6 +34,7 @@ def main():
         ball_bbox = tracks['ball'][frame_num][1]['bbox']
         assigned_player = player_assigner.assigner_ball_to_player(players=player_track, ball_bbox=ball_bbox)
 
+        # Team Ball Control is not accurate
         if assigned_player != -1:
             tracks['players'][frame_num][assigned_player]['has_ball'] = True
             team_ball_control.append(tracks['players'][frame_num][assigned_player]['team'])
@@ -42,7 +43,7 @@ def main():
     team_ball_control= np.array(team_ball_control)
 
     # Draw Output
-    output_video_frames = tracker.draw_annotations(video_frames, tracks)
+    output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control)
 
     # Save Video
     save_video(output_video_frames, 'output_videos/08fd33_4.avi')
