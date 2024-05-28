@@ -30,7 +30,7 @@ class TeamAssigner:
         """
         image_2d = image.reshape(-1, 3)
         num_clusters = 2
-        kmeans = KMeans(n_clusters=num_clusters, init="k-means++", n_init=1)
+        kmeans = KMeans(n_clusters=num_clusters, init="k-means++", n_init=10)
         kmeans.fit(image_2d)
         return kmeans
 
@@ -104,5 +104,12 @@ class TeamAssigner:
         player_color = self._extract_player_color(frame, player_bbox)
         team_id = int(self.kmeans.predict(player_color.reshape(1, -1))[0])
         team_id += 1
+
+        #todo: fix this - Hard assign goalkeeper for now
+        if player_id == 220:
+            team_id = 1
+        if player_id == 630:
+            team_id = 2
+
         self.player_team_dict[player_id] = team_id
         return team_id
