@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 
 from utils import read_video, save_video
@@ -5,25 +6,35 @@ from trackers import ObjectTracker
 from team_assigner import TeamAssigner
 from player_ball_assigner import PlayerBallAssigner
 from camera_movement_estimator import CamerMovementEstimator
+from view_transformer import ViewTransformer
+from speed_distance_estimator import PlayerPerformanceMetrics
 
-def main():
+def main(args):
     # Read Video
     video_frames = read_video('input_videos/08fd33_4.mp4')
 
     # Get Tracks
     tracker = ObjectTracker('models/best.pt')
-    tracks = tracker.track_objects(video_frames, read_from_stub=True, stub_path='stubs/object_tracker_stubs.pkl')
+    tracks = tracker.track_objects(video_frames, read_from_stub=args.use_stubs, stub_path='stubs/object_tracker_stubs.pkl')
 
     # Get object positions
     tracker.add_position_to_tracks(tracks)
 
     # Camera Movement Estimator
     camera_movement_estimator = CamerMovementEstimator(frame=video_frames[0])
-    camera_movement_per_frame = camera_movement_estimator.get_camera_movement(video_frames, read_from_stub=True, stub_path='stubs/camera_movement_stubs.pkl')
+    camera_movement_per_frame = camera_movement_estimator.get_camera_movement(video_frames, read_from_stub=args.use_stubs, stub_path='stubs/camera_movement_stubs.pkl')
     camera_movement_estimator.adjust_position_to_tracks(tracks, camera_movement_per_frame)
+
+    # View Transformer
+    view_transformer = ViewTransformer()
+    view_transformer.add_transformed_positions_to_tracks(tracks)
     
     # Interpolate ball positions
     tracks["ball"] = tracker.interpolate_ball_positions(tracks["ball"])
+
+    # Speed and distance estimator
+    speed_and_distance_estimator = PlayerPerformanceMetrics()
+    speed_and_distance_estimator.calculate_and_append_metrics(tracks)
 
     # Assign Player Teams
     team_assigner = TeamAssigner()
@@ -57,8 +68,14 @@ def main():
     # Draw camera movement
     output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
 
+    # Draw Speed and Distance
+    speed_and_distance_estimator.annotate_frames_with_metrics(output_video_frames, tracks)
+
     # Save Video
     save_video(output_video_frames, 'output_videos/08fd33_4.avi')
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Process video with optional stub usage.")
+    parser.add_argument('--use_stubs', action='store_true', help='Use stubs for tracking and camera movement estimation')
+    args = parser.parse_args()
+    main(args)
