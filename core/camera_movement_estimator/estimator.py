@@ -2,7 +2,7 @@ import os
 import pickle
 from typing import List, Dict, Union
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 
 from utils import measure_distance, measure_xy_distance
 

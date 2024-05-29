@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 from utils import get_center_of_bbox, measure_distance
 
 class PlayerBallAssigner():

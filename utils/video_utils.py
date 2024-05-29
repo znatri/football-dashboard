@@ -31,7 +31,7 @@ def save_video(frames: List, video_path: str) -> None:
         raise ValueError("No frames to save")
 
     height, width, _ = frames[0].shape
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Changed codec to 'mp4v' for MP4 format
     out = cv2.VideoWriter(video_path, fourcc, 24.0, (width, height))
 
     for frame in frames:

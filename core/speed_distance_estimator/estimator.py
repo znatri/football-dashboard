@@ -1,6 +1,6 @@
 from typing import Optional, Dict, List
 import sys
-sys.path.append("../")
+sys.path.append("../../")
 
 from utils import measure_distance, get_foot_position
 

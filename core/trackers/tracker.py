@@ -14,9 +14,10 @@ from ultralytics import YOLO
 
 
 class ObjectTracker:
-    '''
+    """
     Object tracker
-    '''
+    """
+
     def __init__(self, model_path: str, tracker_type: str = 'ByteTrack'):
         """
         Initialize the tracker
@@ -27,7 +28,8 @@ class ObjectTracker:
         self.model = YOLO(model_path)
         self.tracker = self._initialize_tracker(tracker_type)
 
-    def _initialize_tracker(self, tracker_type: str):
+    @staticmethod
+    def _initialize_tracker(tracker_type: str):
         """
         Initialize the tracker based on the tracker type.
 
@@ -38,7 +40,7 @@ class ObjectTracker:
             return sv.ByteTrack()
         else:
             raise ValueError(f"Unsupported tracker type: {tracker_type}")
-        
+
     def add_position_to_tracks(self, tracks):
         """
         Adds positional information to each track in the tracking dictionary. For the ball, the position is defined
@@ -57,24 +59,24 @@ class ObjectTracker:
 
                         # Determine position based on the type of object
                         if object == 'ball':
-                            position= get_center_of_bbox(bbox)
+                            position = get_center_of_bbox(bbox)
                         else:
                             position = get_foot_position(bbox)
-                            
+
                         tracks[object][frame_num][track_id]['position'] = position
                     except (KeyError, TypeError, IndexError) as error:
                         print(f"Error adjusting position for track ID {track_id} in frame {frame_num}: {error}")
                         continue
-                    
-    def interpolate_ball_positions(self,ball_positions):
-        ball_positions = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
-        df_ball_positions = pd.DataFrame(ball_positions,columns=['x1','y1','x2','y2'])
+
+    def interpolate_ball_positions(self, ball_positions):
+        ball_positions = [x.get(1, {}).get('bbox', []) for x in ball_positions]
+        df_ball_positions = pd.DataFrame(ball_positions, columns=['x1', 'y1', 'x2', 'y2'])
 
         # Interpolate missing values
         df_ball_positions = df_ball_positions.interpolate()
         df_ball_positions = df_ball_positions.bfill()
 
-        ball_positions = [{1: {"bbox":x}} for x in df_ball_positions.to_numpy().tolist()]
+        ball_positions = [{1: {"bbox": x}} for x in df_ball_positions.to_numpy().tolist()]
 
         return ball_positions
 
@@ -92,7 +94,7 @@ class ObjectTracker:
             batch = frames[i:i + batch_size]
             results = self.model(batch, conf=0.1)
             detections.extend(results)
-        
+
         return detections
 
     def track_objects(self, frames: List, read_from_stub: bool = False, stub_path: Union[str, None] = None) -> Dict:
@@ -108,7 +110,7 @@ class ObjectTracker:
         if read_from_stub and stub_path and os.path.exists(stub_path):
             with open(stub_path, 'rb') as f:
                 return pickle.load(f)
-            
+
         detections = self.detect_objects(frames)
         tracks = {
             "players": [{} for _ in range(len(detections))],
@@ -150,7 +152,7 @@ class ObjectTracker:
                 raise RuntimeError(f"Error saving tracks to file: {e}")
 
         return tracks
-    
+
     def draw_ellipse(self, frame, bbox: List, color, track_id=None):
         """
         Draw an ellipse on a frame
@@ -166,11 +168,11 @@ class ObjectTracker:
         width = get_bbox_width(bbox)
 
         cv2.ellipse(
-            frame, 
-            center=(x_center, y2), 
-            axes=(int(width), int(0.35 * width)), 
-            angle=0, 
-            startAngle=-45, 
+            frame,
+            center=(x_center, y2),
+            axes=(int(width), int(0.35 * width)),
+            angle=0,
+            startAngle=-45,
             endAngle=235,
             color=color,
             thickness=2,
@@ -180,19 +182,19 @@ class ObjectTracker:
         # Draw rectangle and track ID
         rectangle_width = int(40)
         rectangle_height = int(20)
-        x1_rect =  int(x_center - rectangle_width // 2)
+        x1_rect = int(x_center - rectangle_width // 2)
         y1_rect = int(y2 - rectangle_height // 2) + 15
         x2_rect = int(x_center + rectangle_width // 2)
         y2_rect = int(y2 + rectangle_height // 2) + 15
 
         if track_id is not None:
             cv2.rectangle(
-                frame, 
-                (x1_rect, y1_rect), 
+                frame,
+                (x1_rect, y1_rect),
                 (x2_rect, y2_rect),
                 color,
                 cv2.FILLED
-            ) 
+            )
 
             x1_text = x1_rect + 12
             if track_id > 99:
@@ -206,10 +208,10 @@ class ObjectTracker:
                 0.6,
                 (0, 0, 0),
                 2
-            ) 
+            )
 
         return frame
-    
+
     def draw_triangle(self, frame, bbox: List, color):
         """
         Draw a triangle on a frame
@@ -221,14 +223,14 @@ class ObjectTracker:
         """
         y = int(bbox[1])
         x, _ = get_center_of_bbox(bbox)
-        
+
         triangle_points = np.array([[x, y], [x - 10, y - 20], [x + 10, y - 20]])
 
-        cv2.drawContours(frame, [triangle_points],0,color, cv2.FILLED)
-        cv2.drawContours(frame, [triangle_points],0,(0,0,0), 2)
+        cv2.drawContours(frame, [triangle_points], 0, color, cv2.FILLED)
+        cv2.drawContours(frame, [triangle_points], 0, (0, 0, 0), 2)
 
         return frame
-    
+
     def draw_ball_control_stats(self, frame, frame_num, team_ball_control):
         """
         Draw ball control statistics on a video frame.
@@ -243,7 +245,7 @@ class ObjectTracker:
         end_point = (1900, 970)
         color_white = (255, 255, 255)
         transparency = 0.4
-        
+
         # Create a semi-transparent overlay
         overlay = frame.copy()
         cv2.rectangle(overlay, start_point, end_point, color_white, cv2.FILLED)
@@ -267,8 +269,8 @@ class ObjectTracker:
         cv2.putText(frame, f"Team 2 Ball Control: {team_2_percentage:.2f}%", (1400, 950), font, 1, (0, 0, 0), 3)
 
         return frame
-    
-    def draw_annotations(self, frames: List, tracks: Dict, team_ball_control: List):
+
+    def draw_annotations(self, frames: List, tracks: Dict, team_ball_control: np.ndarray):
         """
         Draw annotations on a batch of frames
 
@@ -285,10 +287,10 @@ class ObjectTracker:
             player_dict = tracks['players'][frame_num]
             referee_dict = tracks['referees'][frame_num]
             ball_dict = tracks['ball'][frame_num]
-            
+
             # Draw Player BBoxes
             for track_id, player in player_dict.items():
-                color = player.get('team_color',  (0, 0, 255))
+                color = player.get('team_color', (0, 0, 255))
                 frame = self.draw_ellipse(frame, player['bbox'], color, track_id)
 
                 if player.get('has_ball', False):
@@ -296,11 +298,11 @@ class ObjectTracker:
 
             # Draw Referee BBoxes
             for _, referee in referee_dict.items():
-                frame = self.draw_ellipse(frame, referee['bbox'], (0, 255, 255)) 
+                frame = self.draw_ellipse(frame, referee['bbox'], (0, 255, 255))
 
-            # Draw Ball BBox
+                # Draw Ball BBox
             for _, ball in ball_dict.items():
-                frame = self.draw_triangle(frame, ball["bbox"],(0,255,0))
+                frame = self.draw_triangle(frame, ball["bbox"], (0, 255, 0))
 
             # Draw Team Ball Control
             frame = self.draw_ball_control_stats(frame, frame_num, team_ball_control)
