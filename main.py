@@ -1,12 +1,12 @@
-import sys, traceback, time, logging # for debug
+import os, sys, traceback, time, logging # for debug
 import argparse 
 import numpy as np
 from core import ObjectTracker, TeamAssigner, PlayerBallAssigner, CamerMovementEstimator, ViewTransformer, PlayerPerformanceMetrics
 from utils import read_video, save_video
-import torch
+
 
 def main(runtime_args, log):
-    torch.cuda.memory._record_memory_history()  # log cuda memory
+    
 
     # Read Video
     video_frames = read_video('input_videos/08fd33_4.mp4')
@@ -74,14 +74,17 @@ def main(runtime_args, log):
     # Draw Output
     output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control)
     if runtime_args.verbose: log.info("assign player team: OK")
+    del tracker
 
-    # Draw camera movement
-    output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
-    if runtime_args.verbose: log.info("draw camera movement: OK")
+    # # Draw camera movement
+    # output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
+    # if runtime_args.verbose: log.info("draw camera movement: OK")
+    # del camera_movement_estimator
 
-    # Draw Speed and Distance
-    speed_and_distance_estimator.annotate_frames_with_metrics(output_video_frames, tracks)
-    if runtime_args.verbose: log.info("speed and distance estimator: OK")
+    # # Draw Speed and Distance
+    # output_video_frames = speed_and_distance_estimator.annotate_frames_with_metrics(output_video_frames, tracks)
+    # if runtime_args.verbose: log.info("speed and distance estimator: OK")
+    # del speed_and_distance_estimator
 
     # Save Video
     save_video(output_video_frames, 'output_videos/08fd33_4.mp4')
@@ -97,8 +100,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     try: # run pipeline
+        # environment
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
+
+        # logging
         logging.basicConfig(level=logging.INFO)
         log=logging.getLogger("ml-pipeline")
+        
+        import torch
+        torch.cuda.memory._record_memory_history(stacks='all')  # log cuda memory
+
         main(args, log)
 
     except Exception as e: # catch failure
