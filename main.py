@@ -109,6 +109,7 @@ if __name__ == "__main__":
         
         import torch
         torch.cuda.memory._record_memory_history(stacks='all')  # log cuda memory
+        torch.cuda.empty_cache()
 
         main(args, log)
 
