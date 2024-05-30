@@ -67,7 +67,7 @@ def main(runtime_args):
     output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
 
     # Draw Speed and Distance
-    speed_and_distance_estimator.annotate_frames_with_metrics(output_video_frames, tracks)
+    output_video_frames = speed_and_distance_estimator.annotate_frames_with_metrics(output_video_frames, tracks)
 
     # Save Video
     save_video(output_video_frames, 'output_videos/08fd33_4.mp4')
