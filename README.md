@@ -9,3 +9,9 @@ source football_env/bin/activate
 pip install -r requirements.txt
 ```
 
+
+Deallocate fragmeneted memory:
+```
+import torch
+torch.cuda.empty_cache() 
+```
