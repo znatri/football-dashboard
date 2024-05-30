@@ -1,0 +1,11 @@
+argparse
+matplotlib
+pandas
+supervision
+ultralytics
+scikit-learn
+torch
+torchvision
+numpy
+opencv-python
+torchaudio
