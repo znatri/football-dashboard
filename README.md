@@ -10,8 +10,16 @@ pip install -r requirements.txt
 ```
 
 
-Deallocate fragmeneted memory:
+## Memory Gotachas
+
+Deallocate fragmented memory:
 ```
 import torch
 torch.cuda.empty_cache() 
+```
+
+Environment tweaks:
+```
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 ```
