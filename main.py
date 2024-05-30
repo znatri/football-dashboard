@@ -1,12 +1,12 @@
 import os, sys, traceback, time, logging # for debug
 import argparse 
-import numpy as np
-from core import ObjectTracker, TeamAssigner, PlayerBallAssigner, CamerMovementEstimator, ViewTransformer, PlayerPerformanceMetrics
-from utils import read_video, save_video
-
 
 def main(runtime_args, log):
-    
+    # import libs
+    import numpy as np
+    from core import ObjectTracker, TeamAssigner, PlayerBallAssigner, CamerMovementEstimator, ViewTransformer, PlayerPerformanceMetrics
+    from utils import read_video, save_video
+    if runtime_args.verbose: log.info("import libs: OK")
 
     # Read Video
     video_frames = read_video('input_videos/08fd33_4.mp4')
@@ -97,6 +97,9 @@ if __name__ == "__main__":
                         help='Use stubs for tracking and camera movement estimation')
     parser.add_argument('-v','--verbose', action='store_true',
                         help='Verbosity flag for logging')
+    parser.add_argument('-s','--snapshot', action='store_true',
+                        help='Capture snapshot of CUDA memory usage')
+
     args = parser.parse_args()
     
     try: # run pipeline
@@ -107,9 +110,10 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.INFO)
         log=logging.getLogger("ml-pipeline")
         
-        import torch
-        torch.cuda.memory._record_memory_history(stacks='all')  # log cuda memory
-        torch.cuda.empty_cache()
+        if args.snapshot:
+            import torch
+            torch.cuda.memory._record_memory_history(stacks='all')  # log cuda memory
+            torch.cuda.empty_cache()
 
         main(args, log)
 
@@ -120,7 +124,8 @@ if __name__ == "__main__":
         log.error(f'\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
     
     finally: # log memory
-        logname = f"memdump/{time.time()}.pickle"
-        torch.cuda.memory._dump_snapshot(logname)
-        log.info(f"saved mem log: {logname}")
+        if args.snapshot:
+            logname = f"memdump/{time.time()}.pickle"
+            torch.cuda.memory._dump_snapshot(logname)
+            log.info(f"saved mem log: {logname}")
     
