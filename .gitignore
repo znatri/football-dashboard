@@ -329,3 +329,6 @@ output_videos/
 
 # Ignore training datasets
 training/football-players-*
+
+# memory dump
+memdump
