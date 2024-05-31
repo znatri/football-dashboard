@@ -106,6 +106,18 @@ def main(runtime_args, log):
         log.info("Annotations drawn: OK")
     del tracker
 
+    # Draw camera movement
+    output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
+    if runtime_args.verbose:
+        log.info("draw camera movement: OK")
+    del camera_movement_estimator
+
+    # Draw Speed and Distance
+    output_video_frames = speed_and_distance_estimator.annotate_frames_with_metrics(output_video_frames, tracks)
+    if runtime_args.verbose:
+        log.info("speed and distance estimator: OK")
+    del speed_and_distance_estimator
+
     # Save Video
     save_video(output_video_frames, 'output_videos/08fd33_4.mp4')
     if runtime_args.verbose:
