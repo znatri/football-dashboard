@@ -1,20 +1,27 @@
-import argparse
-import numpy as np
+import os, sys, traceback, time, logging # for debug
+import argparse 
 
-from core import ObjectTracker, TeamAssigner, PlayerBallAssigner, CamerMovementEstimator, ViewTransformer, PlayerPerformanceMetrics
-from utils import read_video, save_video
+def main(runtime_args, log):
+    # import libs
+    import numpy as np
+    from core import ObjectTracker, TeamAssigner, PlayerBallAssigner, CamerMovementEstimator, ViewTransformer, PlayerPerformanceMetrics
+    from utils import read_video, save_video
+    if runtime_args.verbose: log.info("import libs: OK")
 
-def main(runtime_args):
     # Read Video
     video_frames = read_video('input_videos/08fd33_4.mp4')
+    if runtime_args.verbose: log.info("video read: OK")
 
     # Get Tracks
+
     tracker = ObjectTracker('models/best.pt')
     tracks = tracker.track_objects(video_frames, read_from_stub=runtime_args.use_stubs,
-                                   stub_path='stubs/object_tracker_stubs.pkl')
+                                stub_path='stubs/object_tracker_stubs.pkl')
+    if runtime_args.verbose: log.info("get tracks: OK")
 
     # Get object positions
     tracker.add_position_to_tracks(tracks)
+    if runtime_args.verbose: log.info("add player positon: OK")
 
     # Camera Movement Estimator
     camera_movement_estimator = CamerMovementEstimator(frame=video_frames[0])
@@ -22,6 +29,7 @@ def main(runtime_args):
                                                                               read_from_stub=runtime_args.use_stubs,
                                                                               stub_path='stubs/camera_movement_stubs.pkl')
     camera_movement_estimator.adjust_position_to_tracks(tracks, camera_movement_per_frame)
+    if runtime_args.verbose: log.info("adjust player positon: OK")
 
     # View Transformer
     view_transformer = ViewTransformer()
@@ -29,6 +37,7 @@ def main(runtime_args):
 
     # Interpolate ball positions
     tracks["ball"] = tracker.interpolate_ball_positions(tracks["ball"])
+    if runtime_args.verbose: log.info("interpolate ball positon: OK")
 
     # Speed and distance estimator
     speed_and_distance_estimator = PlayerPerformanceMetrics()
@@ -43,6 +52,7 @@ def main(runtime_args):
             team = team_assigner.get_player_team(video_frames[frame_num], track['bbox'], player_id)
             tracks['players'][frame_num][player_id]['team'] = team
             tracks['players'][frame_num][player_id]['team_color'] = team_assigner.team_colors[team]
+    if runtime_args.verbose: log.info("assign player team: OK")
 
     # Assign Ball Acquisition
     player_assigner = PlayerBallAssigner()
@@ -59,23 +69,63 @@ def main(runtime_args):
         else:
             team_ball_control.append(team_ball_control[-1])
     team_ball_control = np.array(team_ball_control)
+    if runtime_args.verbose: log.info("team ball control: OK")
 
     # Draw Output
     output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control)
+    if runtime_args.verbose: log.info("assign player team: OK")
+    del tracker
 
-    # Draw camera movement
-    output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
+    # # Draw camera movement
+    # output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
+    # if runtime_args.verbose: log.info("draw camera movement: OK")
+    # del camera_movement_estimator
 
-    # Draw Speed and Distance
-    output_video_frames = speed_and_distance_estimator.annotate_frames_with_metrics(output_video_frames, tracks)
+    # # Draw Speed and Distance
+    # output_video_frames = speed_and_distance_estimator.annotate_frames_with_metrics(output_video_frames, tracks)
+    # if runtime_args.verbose: log.info("speed and distance estimator: OK")
+    # del speed_and_distance_estimator
 
     # Save Video
     save_video(output_video_frames, 'output_videos/08fd33_4.mp4')
+    if runtime_args.verbose: log.info("save video: OK")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process video with optional stub usage.")
     parser.add_argument('--use_stubs', action='store_true',
                         help='Use stubs for tracking and camera movement estimation')
+    parser.add_argument('-v','--verbose', action='store_true',
+                        help='Verbosity flag for logging')
+    parser.add_argument('-s','--snapshot', action='store_true',
+                        help='Capture snapshot of CUDA memory usage')
+
     args = parser.parse_args()
-    main(args)
+    
+    try: # run pipeline
+        # environment
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
+
+        # logging
+        logging.basicConfig(level=logging.INFO)
+        log=logging.getLogger("ml-pipeline")
+        
+        if args.snapshot:
+            import torch
+            torch.cuda.memory._record_memory_history(stacks='all')  # log cuda memory
+            torch.cuda.empty_cache()
+
+        main(args, log)
+
+    except Exception as e: # catch failure
+        exc_info = sys.exc_info()
+        log.error(f'\n{e}\n%%%%%%%%%%%%%%%%%%%ERROR%%%%%%%%%%%%%%%%%%%\n')
+        traceback.print_exception(*exc_info)
+        log.error(f'\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n')
+    
+    finally: # log memory
+        if args.snapshot:
+            logname = f"memdump/{time.time()}.pickle"
+            torch.cuda.memory._dump_snapshot(logname)
+            log.info(f"saved mem log: {logname}")
+    
