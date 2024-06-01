@@ -86,7 +86,7 @@ def main(runtime_args, log):
             tracks['players'][frame_num][player_id]['team'] = team
             tracks['players'][frame_num][player_id]['team_color'] = team_assigner.team_colors[team]
     if runtime_args.verbose:
-        log.info("Player teams assigned: OK")
+        log.debug("Player teams assigned: OK")
         log_resource_usage(log)
 
     # Assign Ball Acquisition
@@ -131,7 +131,7 @@ def main(runtime_args, log):
     # Save Video
     save_video(output_video_frames, output_video)
     if runtime_args.verbose:
-        log.info(f"Video saved: {output_video}")
+        log.debug(f"Video saved: {output_video}")
         log_resource_usage(log)
 
 if __name__ == "__main__":
