@@ -1,5 +1,7 @@
 import cv2
 from typing import List
+import os
+from datetime import datetime
 
 def read_video(video_path):
     """
@@ -38,3 +40,10 @@ def save_video(frames: List, video_path: str) -> None:
         out.write(frame)
 
     out.release()
+
+def generate_output_filename(input_path, output_dir="output_videos"):
+    base_name = os.path.basename(input_path)
+    name, ext = os.path.splitext(base_name)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = os.path.join(output_dir, f"{name}_{timestamp}{ext}")
+    return output_path
