@@ -13,7 +13,7 @@ from core import (
     ViewTransformer,
     PlayerPerformanceMetrics
 )
-from utils import read_video, save_video, log_resource_usage, configure_logging, generate_output_filename
+from utils import read_video, save_video, configure_logging, generate_output_filename
 import torch
 
 def setup_environment():
@@ -25,13 +25,11 @@ def main(runtime_args, log):
     
     if runtime_args.verbose:
         log.debug(f"Start processing video: {input_video}")
-        log_resource_usage(log)
 
     # Read Video
     video_frames = read_video(input_video)
     if runtime_args.verbose:
         log.debug("Video read: OK")
-        log_resource_usage(log)
 
     # Get Tracks
     tracker = ObjectTracker('models/best.pt')
@@ -42,13 +40,11 @@ def main(runtime_args, log):
     )
     if runtime_args.verbose:
         log.debug("Object tracking: OK")
-        log_resource_usage(log)
 
     # Add Positions to Tracks
     tracker.add_position_to_tracks(tracks)
     if runtime_args.verbose:
         log.debug("Player positions added: OK")
-        log_resource_usage(log)
 
     # Camera Movement Estimator
     camera_movement_estimator = CamerMovementEstimator(frame=video_frames[0])
@@ -60,7 +56,6 @@ def main(runtime_args, log):
     camera_movement_estimator.adjust_position_to_tracks(tracks, camera_movement_per_frame)
     if runtime_args.verbose:
         log.debug("Camera movement adjusted: OK")
-        log_resource_usage(log)
 
     # View Transformer
     view_transformer = ViewTransformer()
@@ -70,7 +65,6 @@ def main(runtime_args, log):
     tracks["ball"] = tracker.interpolate_ball_positions(tracks["ball"])
     if runtime_args.verbose:
         log.debug("Ball positions interpolated: OK")
-        log_resource_usage(log)
 
     # Speed and Distance Estimator
     speed_and_distance_estimator = PlayerPerformanceMetrics()
@@ -87,7 +81,6 @@ def main(runtime_args, log):
             tracks['players'][frame_num][player_id]['team_color'] = team_assigner.team_colors[team]
     if runtime_args.verbose:
         log.debug("Player teams assigned: OK")
-        log_resource_usage(log)
 
     # Assign Ball Acquisition
     player_assigner = PlayerBallAssigner()
@@ -105,34 +98,29 @@ def main(runtime_args, log):
     team_ball_control = np.array(team_ball_control)
     if runtime_args.verbose:
         log.debug("Ball control assigned: OK")
-        log_resource_usage(log)
 
     # Draw Output
     output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control)
     if runtime_args.verbose:
         log.debug("Annotations drawn: OK")
-        log_resource_usage(log)
     del tracker
 
     # Draw camera movement
     output_video_frames = camera_movement_estimator.draw_camera_movement(output_video_frames, camera_movement_per_frame)
     if runtime_args.verbose:
         log.debug("Camera movement drawn: OK")
-        log_resource_usage(log)
     del camera_movement_estimator
 
     # Draw Speed and Distance
     output_video_frames = speed_and_distance_estimator.annotate_frames_with_metrics(output_video_frames, tracks)
     if runtime_args.verbose:
         log.debug("Speed and distance metrics drawn: OK")
-        log_resource_usage(log)
     del speed_and_distance_estimator
 
     # Save Video
     save_video(output_video_frames, output_video)
     if runtime_args.verbose:
         log.debug(f"Video saved: {output_video}")
-        log_resource_usage(log)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process video with optional stub usage.")

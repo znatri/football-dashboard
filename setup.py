@@ -17,7 +17,7 @@ def install_requirements():
         print("Failed to install dependencies. Please check the requirements.txt file.")
 
 def setup_directories():
-    required_dirs = ['input_videos', 'output_videos', 'stubs', 'models']
+    required_dirs = ['input_videos', 'output_videos', 'stubs', 'models', 'memdump', 'logs']
     for directory in required_dirs:
         if not os.path.exists(directory):
             os.makedirs(directory)
