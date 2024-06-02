@@ -19,12 +19,15 @@ import torch
 def setup_environment():
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 
+def list_models(directory='models'):
+    return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+
 def main(runtime_args, log):
     input_video = runtime_args.input_video or 'input_videos/08fd33_4.mp4'
-    output_video = generate_output_filename(input_video)
+    output_video = runtime_args.output_path or generate_output_filename(input_video)
     
     if runtime_args.verbose:
-        log.debug(f"Start processing video: {input_video}")
+        log.info(f"Start processing video: {input_video}")
 
     # Read Video
     video_frames = read_video(input_video)
@@ -32,7 +35,9 @@ def main(runtime_args, log):
         log.debug("Video read: OK")
 
     # Get Tracks
-    tracker = ObjectTracker('models/best.pt')
+    model_path = os.path.join('models', runtime_args.model)
+    log.info(f"Using model: {model_path}")
+    tracker = ObjectTracker(model_path)
     tracks = tracker.track_objects(
         video_frames,
         read_from_stub=runtime_args.use_stubs,
@@ -120,16 +125,25 @@ def main(runtime_args, log):
     # Save Video
     save_video(output_video_frames, output_video)
     if runtime_args.verbose:
-        log.debug(f"Video saved: {output_video}")
+        log.info(f"Video saved: {output_video}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process video with optional stub usage.")
-    parser.add_argument('--input_video', type=str, help='Path to the input video file')
+    parser.add_argument('-i', '--input_video', type=str, help='Path to the input video file')
+    parser.add_argument('-o', '--output_path', type=str, help='Path to save the output video file')
     parser.add_argument('--use_stubs', action='store_true', help='Use stubs for tracking and camera movement estimation')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbosity flag for logging')
     parser.add_argument('-s', '--snapshot', action='store_true', help='Capture snapshot of CUDA memory usage')
+    parser.add_argument('-l', '--list_models', action='store_true', help='List available models')
+    parser.add_argument('-m', '--model', type=str, default='best_train9.pt', help='Specify which model to use (default: best.pt)')
 
     args = parser.parse_args()
+
+    if args.list_models:
+        print("Available models:")
+        for model in list_models():
+            print(model)
+        sys.exit(0)
 
     try:
         setup_environment()
