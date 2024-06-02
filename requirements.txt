@@ -1,0 +1,10 @@
+argparse
+matplotlib
+pandas
+supervision
+ultralytics
+scikit-learn
+numpy
+opencv-python
+colorlog
+psutil
