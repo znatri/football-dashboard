@@ -2,6 +2,7 @@ import os
 import pickle
 from typing import List, Dict, Union
 import sys
+
 sys.path.append("../ ")
 
 from utils import get_center_of_bbox, get_bbox_width, get_foot_position
@@ -18,7 +19,7 @@ class ObjectTracker:
     Object tracker
     """
 
-    def __init__(self, model_path: str, tracker_type: str = 'ByteTrack'):
+    def __init__(self, model_path: str, tracker_type: str = "ByteTrack"):
         """
         Initialize the tracker
 
@@ -36,7 +37,7 @@ class ObjectTracker:
         :param tracker_type: type of tracker to use
         :return: initialized tracker instance
         """
-        if tracker_type == 'ByteTrack':
+        if tracker_type == "ByteTrack":
             return sv.ByteTrack()
         else:
             raise ValueError(f"Unsupported tracker type: {tracker_type}")
@@ -55,28 +56,34 @@ class ObjectTracker:
             for frame_num, track in enumerate(object_tracks):
                 for track_id, track_info in track.items():
                     try:
-                        bbox = track_info['bbox']
+                        bbox = track_info["bbox"]
 
                         # Determine position based on the type of object
-                        if object == 'ball':
+                        if object == "ball":
                             position = get_center_of_bbox(bbox)
                         else:
                             position = get_foot_position(bbox)
 
-                        tracks[object][frame_num][track_id]['position'] = position
+                        tracks[object][frame_num][track_id]["position"] = position
                     except (KeyError, TypeError, IndexError) as error:
-                        print(f"Error adjusting position for track ID {track_id} in frame {frame_num}: {error}")
+                        print(
+                            f"Error adjusting position for track ID {track_id} in frame {frame_num}: {error}"
+                        )
                         continue
 
     def interpolate_ball_positions(self, ball_positions):
-        ball_positions = [x.get(1, {}).get('bbox', []) for x in ball_positions]
-        df_ball_positions = pd.DataFrame(ball_positions, columns=['x1', 'y1', 'x2', 'y2'])
+        ball_positions = [x.get(1, {}).get("bbox", []) for x in ball_positions]
+        df_ball_positions = pd.DataFrame(
+            ball_positions, columns=["x1", "y1", "x2", "y2"]
+        )
 
         # Interpolate missing values
         df_ball_positions = df_ball_positions.interpolate()
         df_ball_positions = df_ball_positions.bfill()
 
-        ball_positions = [{1: {"bbox": x}} for x in df_ball_positions.to_numpy().tolist()]
+        ball_positions = [
+            {1: {"bbox": x}} for x in df_ball_positions.to_numpy().tolist()
+        ]
 
         return ball_positions
 
@@ -91,13 +98,18 @@ class ObjectTracker:
         detections = []
 
         for i in range(0, len(frames), batch_size):
-            batch = frames[i:i + batch_size]
+            batch = frames[i : i + batch_size]
             results = self.model(batch, conf=0.1)
             detections.extend(results)
 
         return detections
 
-    def track_objects(self, frames: List, read_from_stub: bool = False, stub_path: Union[str, None] = None) -> Dict:
+    def track_objects(
+        self,
+        frames: List,
+        read_from_stub: bool = False,
+        stub_path: Union[str, None] = None,
+    ) -> Dict:
         """
         Track objects in a batch of frames
 
@@ -108,14 +120,14 @@ class ObjectTracker:
         """
 
         if read_from_stub and stub_path and os.path.exists(stub_path):
-            with open(stub_path, 'rb') as f:
+            with open(stub_path, "rb") as f:
                 return pickle.load(f)
 
         detections = self.detect_objects(frames)
         tracks = {
             "players": [{} for _ in range(len(detections))],
             "referees": [{} for _ in range(len(detections))],
-            "ball": [{} for _ in range(len(detections))]
+            "ball": [{} for _ in range(len(detections))],
         }
 
         for frame_num, detection in enumerate(detections):
@@ -125,28 +137,32 @@ class ObjectTracker:
             detection_supervision = sv.Detections.from_ultralytics(detection)
 
             for obj_indx, cls_id in enumerate(detection_supervision.class_id):
-                if class_names[cls_id] == 'goalkeeper':
-                    detection_supervision.class_id[obj_indx] = class_names_inverted['player']
+                if class_names[cls_id] == "goalkeeper":
+                    detection_supervision.class_id[obj_indx] = class_names_inverted[
+                        "player"
+                    ]
 
-            detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
+            detection_with_tracks = self.tracker.update_with_detections(
+                detection_supervision
+            )
 
             for frame_detection in detection_with_tracks:
                 bbox = frame_detection[0].tolist()
                 cls_id = frame_detection[3]
                 track_id = frame_detection[4]
 
-                if cls_id == class_names_inverted['player']:
-                    tracks['players'][frame_num][track_id] = {'bbox': bbox}
+                if cls_id == class_names_inverted["player"]:
+                    tracks["players"][frame_num][track_id] = {"bbox": bbox}
 
-                elif cls_id == class_names_inverted['referee']:
-                    tracks['referees'][frame_num][track_id] = {'bbox': bbox}
+                elif cls_id == class_names_inverted["referee"]:
+                    tracks["referees"][frame_num][track_id] = {"bbox": bbox}
 
-                elif cls_id == class_names_inverted['ball']:
-                    tracks['ball'][frame_num][1] = {'bbox': bbox}
+                elif cls_id == class_names_inverted["ball"]:
+                    tracks["ball"][frame_num][1] = {"bbox": bbox}
 
         if stub_path:
             try:
-                with open(stub_path, 'wb') as f:
+                with open(stub_path, "wb") as f:
                     pickle.dump(tracks, f)
             except IOError as e:
                 raise RuntimeError(f"Error saving tracks to file: {e}")
@@ -189,11 +205,7 @@ class ObjectTracker:
 
         if track_id is not None:
             cv2.rectangle(
-                frame,
-                (x1_rect, y1_rect),
-                (x2_rect, y2_rect),
-                color,
-                cv2.FILLED
+                frame, (x1_rect, y1_rect), (x2_rect, y2_rect), color, cv2.FILLED
             )
 
             x1_text = x1_rect + 12
@@ -207,7 +219,7 @@ class ObjectTracker:
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.6,
                 (0, 0, 0),
-                2
+                2,
             )
 
         return frame
@@ -252,25 +264,49 @@ class ObjectTracker:
         cv2.addWeighted(overlay, transparency, frame, 1 - transparency, 0, frame)
 
         # Calculate ball control percentages up to the current frame
-        control_data_until_now = team_ball_control[:frame_num + 1]
+        control_data_until_now = team_ball_control[: frame_num + 1]
         frames_with_team_1_control = np.sum(control_data_until_now == 1)
         frames_with_team_2_control = np.sum(control_data_until_now == 2)
-        total_controlled_frames = frames_with_team_1_control + frames_with_team_2_control
+        total_controlled_frames = (
+            frames_with_team_1_control + frames_with_team_2_control
+        )
 
         if total_controlled_frames > 0:
-            team_1_percentage = frames_with_team_1_control / total_controlled_frames * 100
-            team_2_percentage = frames_with_team_2_control / total_controlled_frames * 100
+            team_1_percentage = (
+                frames_with_team_1_control / total_controlled_frames * 100
+            )
+            team_2_percentage = (
+                frames_with_team_2_control / total_controlled_frames * 100
+            )
         else:
             team_1_percentage = team_2_percentage = 0
 
         # Draw the text on the frame
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(frame, f"Team 1 Ball Control: {team_1_percentage:.2f}%", (1400, 900), font, 1, (0, 0, 0), 3)
-        cv2.putText(frame, f"Team 2 Ball Control: {team_2_percentage:.2f}%", (1400, 950), font, 1, (0, 0, 0), 3)
+        cv2.putText(
+            frame,
+            f"Team 1 Ball Control: {team_1_percentage:.2f}%",
+            (1400, 900),
+            font,
+            1,
+            (0, 0, 0),
+            3,
+        )
+        cv2.putText(
+            frame,
+            f"Team 2 Ball Control: {team_2_percentage:.2f}%",
+            (1400, 950),
+            font,
+            1,
+            (0, 0, 0),
+            3,
+        )
 
         return frame
 
-    def draw_annotations(self, frames: List, tracks: Dict, team_ball_control: np.ndarray):
+    def draw_annotations(
+        self, frames: List, tracks: Dict, team_ball_control: np.ndarray
+    ):
         """
         Draw annotations on a batch of frames
 
@@ -284,21 +320,21 @@ class ObjectTracker:
         for frame_num, frame in enumerate(frames):
             frame = frame.copy()
 
-            player_dict = tracks['players'][frame_num]
-            referee_dict = tracks['referees'][frame_num]
-            ball_dict = tracks['ball'][frame_num]
+            player_dict = tracks["players"][frame_num]
+            referee_dict = tracks["referees"][frame_num]
+            ball_dict = tracks["ball"][frame_num]
 
             # Draw Player BBoxes
             for track_id, player in player_dict.items():
-                color = player.get('team_color', (0, 0, 255))
-                frame = self.draw_ellipse(frame, player['bbox'], color, track_id)
+                color = player.get("team_color", (0, 0, 255))
+                frame = self.draw_ellipse(frame, player["bbox"], color, track_id)
 
-                if player.get('has_ball', False):
-                    frame = self.draw_triangle(frame, player['bbox'], (0, 0, 255))
+                if player.get("has_ball", False):
+                    frame = self.draw_triangle(frame, player["bbox"], (0, 0, 255))
 
             # Draw Referee BBoxes
             for _, referee in referee_dict.items():
-                frame = self.draw_ellipse(frame, referee['bbox'], (0, 255, 255))
+                frame = self.draw_ellipse(frame, referee["bbox"], (0, 255, 255))
 
                 # Draw Ball BBox
             for _, ball in ball_dict.items():

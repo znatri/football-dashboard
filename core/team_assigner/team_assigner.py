@@ -34,7 +34,9 @@ class TeamAssigner:
         kmeans.fit(image_2d)
         return kmeans
 
-    def _extract_player_color(self, frame: np.ndarray, bbox: Tuple[int, int, int, int]) -> np.ndarray:
+    def _extract_player_color(
+        self, frame: np.ndarray, bbox: Tuple[int, int, int, int]
+    ) -> np.ndarray:
         """
         Extracts the primary color of a player's uniform from a given frame and bounding box.
 
@@ -46,17 +48,19 @@ class TeamAssigner:
         :return: np.ndarray
             The primary color of the player's uniform.
         """
-        img = frame[int(bbox[1]):int(bbox[3]), int(bbox[0]):int(bbox[2])]
-        top_half_image = img[:img.shape[0] // 2, :]
+        img = frame[int(bbox[1]) : int(bbox[3]), int(bbox[0]) : int(bbox[2])]
+        top_half_image = img[: img.shape[0] // 2, :]
 
         kmeans = self._get_clustering_model(top_half_image)
         labels = kmeans.labels_
-        clustered_image = labels.reshape(top_half_image.shape[0], top_half_image.shape[1])
+        clustered_image = labels.reshape(
+            top_half_image.shape[0], top_half_image.shape[1]
+        )
         corner_clusters = [
             clustered_image[0, 0],
             clustered_image[0, -1],
             clustered_image[-1, 0],
-            clustered_image[-1, -1]
+            clustered_image[-1, -1],
         ]
 
         non_player_cluster = max(set(corner_clusters), key=corner_clusters.count)
@@ -64,7 +68,11 @@ class TeamAssigner:
         player_color = kmeans.cluster_centers_[player_cluster]
         return player_color
 
-    def assign_team_colors(self, frame: np.ndarray, player_detections: Dict[int, Dict[str, Union[int, List[int]]]]) -> None:
+    def assign_team_colors(
+        self,
+        frame: np.ndarray,
+        player_detections: Dict[int, Dict[str, Union[int, List[int]]]],
+    ) -> None:
         """
         Assigns team colors based on the detected player bounding boxes in the frame.
 
@@ -73,8 +81,11 @@ class TeamAssigner:
         :param player_detections: Dict[int, Dict[str, Union[int, List[int]]]]
             A dictionary containing player detections with their bounding boxes.
         """
-        player_colors = [self._extract_player_color(frame, player_detection['bbox']) for player_detection in player_detections.values()]
-        
+        player_colors = [
+            self._extract_player_color(frame, player_detection["bbox"])
+            for player_detection in player_detections.values()
+        ]
+
         num_clusters = 2
         kmeans = KMeans(n_clusters=num_clusters, init="k-means++", n_init=10)
         kmeans.fit(player_colors)
@@ -82,10 +93,12 @@ class TeamAssigner:
         self.kmeans = kmeans
         self.team_colors = {
             1: kmeans.cluster_centers_[0],
-            2: kmeans.cluster_centers_[1]
+            2: kmeans.cluster_centers_[1],
         }
 
-    def get_player_team(self, frame: np.ndarray, player_bbox: Tuple[int, int, int, int], player_id: int) -> int:
+    def get_player_team(
+        self, frame: np.ndarray, player_bbox: Tuple[int, int, int, int], player_id: int
+    ) -> int:
         """
         Determines the team of a player based on their uniform color.
 
@@ -105,7 +118,7 @@ class TeamAssigner:
         team_id = int(self.kmeans.predict(player_color.reshape(1, -1))[0])
         team_id += 1
 
-        #todo: fix this - Hard assign goalkeeper for now
+        # todo: fix this - Hard assign goalkeeper for now
         if player_id == 220:
             team_id = 1
         if player_id == 630:

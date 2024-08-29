@@ -3,6 +3,7 @@ from typing import List
 import os
 from datetime import datetime
 
+
 def read_video(video_path):
     """
     Read a video and return a list of frames.
@@ -18,9 +19,10 @@ def read_video(video_path):
         if not ret:
             break
         frames.append(frame)
-     
+
     cap.release()
     return frames
+
 
 def save_video(frames: List, video_path: str) -> None:
     """
@@ -33,13 +35,14 @@ def save_video(frames: List, video_path: str) -> None:
         raise ValueError("No frames to save")
 
     height, width, _ = frames[0].shape
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Changed codec to 'mp4v' for MP4 format
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Changed codec to 'mp4v' for MP4 format
     out = cv2.VideoWriter(video_path, fourcc, 24.0, (width, height))
 
     for frame in frames:
         out.write(frame)
 
     out.release()
+
 
 def generate_output_filename(input_path, output_dir="output_videos"):
     base_name = os.path.basename(input_path)

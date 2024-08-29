@@ -6,6 +6,7 @@ import psutil
 import torch
 from .logger import log
 
+
 def profile():
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -40,12 +41,18 @@ def profile():
                     log.info(f"Memory usage: {memory_usage:.2f} MB")
 
                 if torch.cuda.is_available():
-                    allocated_gpu_memory = torch.cuda.memory_allocated() / (1024 * 1024)  # in MB
-                    cached_gpu_memory = torch.cuda.memory_reserved() / (1024 * 1024)  # in MB
+                    allocated_gpu_memory = torch.cuda.memory_allocated() / (
+                        1024 * 1024
+                    )  # in MB
+                    cached_gpu_memory = torch.cuda.memory_reserved() / (
+                        1024 * 1024
+                    )  # in MB
                     if log:
                         log.info(f"Allocated GPU memory: {allocated_gpu_memory:.2f} MB")
                         log.info(f"Cached GPU memory: {cached_gpu_memory:.2f} MB")
 
             return result
+
         return wrapper
+
     return decorator
