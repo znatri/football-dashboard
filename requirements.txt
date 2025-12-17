@@ -8,3 +8,6 @@ numpy
 opencv-python
 colorlog
 psutil
+fastapi
+uvicorn[standard]
+python-multipart

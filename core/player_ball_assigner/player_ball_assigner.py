@@ -1,30 +1,37 @@
-import sys
-
-sys.path.append("../../")
-from utils import get_center_of_bbox, measure_distance
-
-
 class PlayerBallAssigner:
-    def __init__(
-        self,
-    ):
-        self.max_player_ball_distance = 70
+    def __init__(self):
+        # Threshold in meters between player foot and ball for possession.
+        self.max_player_ball_distance_m = 1.2
 
-    def assigner_ball_to_player(self, players, ball_bbox):
-        ball_pos = get_center_of_bbox(ball_bbox)
+    def assigner_ball_to_player(self, players, ball_position_field):
+        """
+        Assign ball to nearest player in FIELD coordinates (meters).
 
-        min_distance = 99999
+        :param players: dict of player_id -> track_info, each containing 'position_field'
+        :param ball_position_field: (X, Y) ball position in field coordinates (meters)
+        :return: player_id that controls the ball or -1 if none within threshold.
+        """
+        from utils import measure_distance
+
+        if ball_position_field is None:
+            return -1
+
+        min_distance = 99999.0
         assigned_player = -1
 
         for player_id, player in players.items():
-            player_bbox = player["bbox"]
+            player_pos = player.get("position_field")
+            if player_pos is None:
+                continue
 
-            dist_left = measure_distance((player_bbox[0], player_bbox[-1]), ball_pos)
-            dist_right = measure_distance((player_bbox[2], player_bbox[-1]), ball_pos)
-            distance = min(dist_left, dist_right)
+            distance = measure_distance(player_pos, ball_position_field)
 
-            if distance < self.max_player_ball_distance and distance < min_distance:
+            if (
+                distance < self.max_player_ball_distance_m
+                and distance < min_distance
+            ):
                 min_distance = distance
                 assigned_player = player_id
 
         return assigned_player
+
